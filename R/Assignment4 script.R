@@ -2,7 +2,8 @@
 # Author: Iroayo Toki
 # Published: December 5, 2025
 # Last updated: November 29, 2025
-# Model Organism:
+# Model Taxa:Drosophilidae
+#Model Genes: ND2, CytB
 
 library(tidyverse)
 library(vegan)
@@ -11,6 +12,7 @@ library(ggplot2)
 library(rentrez)
 library(Biostrings)
 
+##_. Entrez search----
 #Carrying out entrez search to find data sets within the needed paramaters, 2 genes of the same taxonomic group with over 1000 sequences and in similar range, I eventually decided to use ND2 and cytb genes for the Drosophilidae family.
 gene1_search <- entrez_search(db = "nucleotide", 
                               term = "drosophilidae [ORGN] AND ND2 [gene]",
@@ -41,7 +43,7 @@ fn_dataframe <- function(st) {
 dfND2 <- fn_dataframe(st_ND2)
 dfCytb <- fn_dataframe(st_Cytb)
 
-#2. Filtering steps----
+#2. Nucleotide Filtering steps----
 summary(str_count(dfND2$sequence))  #median= 893
 summary(str_count(dfCytb$sequence)) #median= 1026
 
@@ -66,3 +68,49 @@ dfCytb <- fn_nuc_filter(dfCytb)
 #Graphical exploration of filtered data
 hist(str_count(dfND2$sequence))
 hist(str_count(dfCytb$sequence))  #Aggregate around the median
+
+#3. Specie and sample size filtering----
+dfND2 %>% select(species_name) %>% count(species_name, sort = T)
+dfCytb %>% select(species_name) %>% count(species_name, sort = T)
+
+#ND2 has 726 samples with 345 species while CytB has 541 samples with 115 samples 
+#Removing 180 lowest sampled species for ND2 i.e 1 sample per specie would make our sample sizes and number of species more comparable 
+species_counts <- dfND2 %>%
+  group_by(species_name) %>%
+  summarise(n_samples = n()) %>%
+  arrange(n_samples)
+
+# Get species to remove
+species_to_remove <- species_counts$species_name[1:180]
+
+# Filter them out
+dfND2<- dfND2 %>%
+  filter(!species_name %in% species_to_remove)
+
+rm(species_counts)
+
+#165 Species and 546 samples for ND2
+length(unique(dfND2$species_name))
+length(dfND2$nucleotides2)
+
+#116 Species and 541 samples for CytB
+length(unique(dfCytb$species_name))
+length(dfCytb$nucleotides2)
+
+
+#4. Adding Kmer Frequencies (Dinucleotide and Trinucleotide)
+
+#Creating function
+Fn_Kmers <- function(df) {
+  df <- as.data.frame(df)
+  df$nucleotides2 <- DNAStringSet(df$nucleotides2)
+  df <- cbind(df, as.data.frame(dinucleotideFrequency(df$nucleotides2, as.prob = TRUE)))
+  df <- cbind(df, as.data.frame(trinucleotideFrequency(df$nucleotides2, as.prob = TRUE)))
+  return(df)
+}
+#Apply
+dfND2 <- Fn_Kmers(dfND2)
+dfCytb <- Fn_Kmers(dfCytb)
+
+
+#5. Clustering----
