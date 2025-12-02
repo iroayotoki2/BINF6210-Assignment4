@@ -4,7 +4,7 @@
 # Last updated: November 29, 2025
 # Model Taxa:Drosophilidae
 #Model Genes: ND2, CytB
-
+#Difference in Clustering patterns of ND2 and CytB genes for the Drosophilidae Taxonomic family 
 library(tidyverse)
 library(vegan)
 library(viridis)
@@ -65,9 +65,7 @@ fn_nuc_filter <- function(df) {
 dfND2 <- fn_nuc_filter(dfND2)
 dfCytb <- fn_nuc_filter(dfCytb)
 
-#Graphical exploration of filtered data
-hist(str_count(dfND2$sequence))
-hist(str_count(dfCytb$sequence))  #Aggregate around the median
+
 
 #3. Specie and sample size filtering----
 dfND2 %>% select(species_name) %>% count(species_name, sort = T)
@@ -97,6 +95,9 @@ length(dfND2$nucleotides2)
 length(unique(dfCytb$species_name))
 length(dfCytb$nucleotides2)
 
+#Graphical exploration of filtered data
+hist(str_count(dfND2$sequence))
+hist(str_count(dfCytb$sequence))  #Aggregate around the median
 
 #4. Adding Kmer Frequencies (Dinucleotide and Trinucleotide)
 
@@ -114,3 +115,22 @@ dfCytb <- Fn_Kmers(dfCytb)
 
 
 #5. Clustering----
+# Creating function to create  distance matrix and clusters with kmer frequencies
+Fn_cluster <- function(df) {
+  dist_mat= dist(df[,-(1:5)], method = "euclidean")
+  Hier_cluster = hclust(dist_mat, method = "single")
+  return(list(
+    Distance_matrix = dist_mat,
+    Cluster= Hier_cluster))
+}
+
+#Apply and create list containing distance matrix and cluster
+ClustND2 <- Fn_cluster(dfND2)
+ClustCytb <- Fn_cluster(dfCytb)
+
+
+#Visualize clusters
+plot(ClustND2$Cluster, labels = dfND2$species_name, cex = 0.3)
+
+plot(ClustCytb$Cluster, labels = dfCytb$species_name, cex = 0.3)
+
