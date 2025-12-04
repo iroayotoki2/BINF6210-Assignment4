@@ -66,41 +66,12 @@ fn_nuc_filter <- function(df) {
 dfND2 <- fn_nuc_filter(dfND2)
 dfCytb <- fn_nuc_filter(dfCytb)
 
-
-
-#3. Specie and sample size filtering----
-dfND2 %>% select(species_name) %>% count(species_name, sort = T)
-dfCytb %>% select(species_name) %>% count(species_name, sort = T)
-
-#ND2 has 726 samples with 345 species while Cytb has 541 samples with 115 samples 
-#Removing 180 lowest sampled species for ND2 i.e 1 sample per specie would make our sample sizes and number of species more comparable 
-species_counts <- dfND2 %>%
-  group_by(species_name) %>%
-  summarise(n_samples = n()) %>%
-  arrange(n_samples)
-
-# Get species to remove
-species_to_remove <- species_counts$species_name[1:180]
-
-# Filter them out
-dfND2<- dfND2 %>%
-  filter(!species_name %in% species_to_remove)
-
-rm(species_counts)
-
-#165 Species and 546 samples for ND2
-length(unique(dfND2$species_name))
-length(dfND2$nucleotides2)
-
-#116 Species and 541 samples for Cytb
-length(unique(dfCytb$species_name))
-length(dfCytb$nucleotides2)
-
 #Graphical exploration of filtered data
 hist(str_count(dfND2$sequence))
-hist(str_count(dfCytb$sequence))  #Aggregate around the median
+hist(str_count(dfCytb$sequence)) #Aggregate around the median
 
-#4. Adding Kmer Frequencies (Dinucleotide and Trinucleotide)
+
+#3. Adding Kmer Frequencies (Dinucleotide and Trinucleotide)----
 
 #Creating function
 Fn_Kmers <- function(df) {
@@ -115,7 +86,7 @@ dfND2 <- Fn_Kmers(dfND2)
 dfCytb <- Fn_Kmers(dfCytb)
 
 
-#5. Clustering----
+#4. Clustering----
 # Creating function to create  distance matrix and clusters with kmer frequencies
 Fn_cluster <- function(df) {
   dist_mat= dist(df[,-(1:5)], method = "euclidean")
@@ -137,7 +108,7 @@ plot(ClustND2$Cluster, labels = dfND2$species_name, cex = 0.3)
 plot(ClustCytb$Cluster, labels = dfCytb$species_name, cex = 0.3)
 
 
-#6. Comparison using internal measures of cluster strength----
+#5. Comparison using internal measures of cluster strength----
 
 #Seperating Cluster object and distance matrices
 
@@ -190,12 +161,11 @@ pca_Cytb <- prcomp(dfCytb[ , -(1:5)], scale. = TRUE)
 pca_Cytb
 #Function for PCA plot of first 2 principal components
 
-plot_pca <- function(pca, clusters, df, title) {
+plot_pca <- function(pca, clusters, title) {
   pca_df <- data.frame(
     PC1 = pca$x[,1],
     PC2 = pca$x[,2],
-    cluster = as.factor(clusters),
-    species = df$species_name
+    cluster = as.factor(clusters)
   )
   
   ggplot(pca_df, aes(PC1, PC2, color = cluster)) +
@@ -204,7 +174,6 @@ plot_pca <- function(pca, clusters, df, title) {
     ggtitle(title)
 }
 #Plots
-plot_pca(pca_ND2, Sil_ND2$Cluster, dfND2, "ND2 PCA")
-plot_pca(pca_Cytb, Sil_Cytb$Cluster, dfCytb, "CytB PCA")
-
+plot_pca(pca_ND2, Sil_ND2$Cluster, "ND2 PCA")
+plot_pca(pca_Cytb, Sil_Cytb$Cluster, "CytB PCA")
 
